@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.git/
+.gitignore
+data/
+downloads/
+thumbs/
+github_downloads/
+cookies.txt
+github_token.txt
+downloaded_history.txt
+*.log
+.venv/
+venv/
