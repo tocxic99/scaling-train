@@ -10,7 +10,7 @@ OWNER_ID          = int(os.environ.get("OWNER_ID", ""))
 
 MONGO_URI = os.environ.get(
     "MONGO_URI",
-    "mongodb+srv://gogo_db_user:4DfbHqcjpjg6TYb8@firebase.snn8z2u.mongodb.net")
+    "")
 DB_NAME   = os.environ.get("DB_NAME", "UPLOADER_BOT")
 
 DEFAULT_COURSE_ID       = os.environ.get("COURSE_ID", "41")
