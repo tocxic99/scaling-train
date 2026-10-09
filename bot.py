@@ -1,33 +1,38 @@
 # ═══════════════════════════════════════════════════════════
-#  ⚙️  CONFIG
+#  ⚙️  CONFIG (Railway Environment Variables)
 # ═══════════════════════════════════════════════════════════
-BOT_TOKEN = "8826538267:AAGgyE3EX_pOxrxTzg7fka3fp4DGo1PU5mY"
-API_ID    = "20346550"
-API_HASH  = "bc79c3bea7a626887bdc0871eecf0327"
-OWNER_ID  = 8617986101
+import os
+import sys
 
-MONGO_URI = "mongodb+srv://gogo_db_user:4DfbHqcjpjg6TYb8@firebase.snn8z2u.mongodb.net"
-DB_NAME   = "UPLOADER_BOT"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8826538267:AAGgyE3EX_pOxrxTzg7fka3fp4DGo1PU5mY")
+API_ID    = os.environ.get("API_ID", "20346550")
+API_HASH  = os.environ.get("API_HASH", "bc79c3bea7a626887bdc0871eecf0327")
+OWNER_ID  = int(os.environ.get("OWNER_ID", "8617986101"))
 
-COURSE_ID       = "41"
-FALLBACK_USERID = "464995"
-AKAMAI_HOST     = "armathsapi.akamai.net.in"
+MONGO_URI = os.environ.get(
+    "MONGO_URI",
+    "mongodb+srv://gogo_db_user:4DfbHqcjpjg6TYb8@firebase.snn8z2u.mongodb.net")
+DB_NAME   = os.environ.get("DB_NAME", "UPLOADER_BOT")
 
-GITHUB_TOKEN = "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"
+COURSE_ID       = os.environ.get("COURSE_ID", "41")
+FALLBACK_USERID = os.environ.get("FALLBACK_USERID", "464995")
+AKAMAI_HOST     = os.environ.get("AKAMAI_HOST", "armathsapi.akamai.net.in")
+
+GITHUB_TOKEN = os.environ.get(
+    "GITHUB_TOKEN",
+    "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")
 
 # 📢 Channel — sab files/links yahan forward honge
-CHANNEL_ID = -1004350191024
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1004350191024")) or None
 
 USE_PROXY = False
 PROXIES = {
-    "http": "http://apna_proxy_ip:port",
-    "https": "http://apna_proxy_ip:port"
+    "http": os.environ.get("PROXY_HTTP", "http://apna_proxy_ip:port"),
+    "https": os.environ.get("PROXY_HTTPS", "http://apna_proxy_ip:port")
 }
 # ═══════════════════════════════════════════════════════════
 
-import os
 import re
-import sys
 import time
 import json
 import asyncio
@@ -62,6 +67,21 @@ log = logging.getLogger("bot")
 
 INSTANCE_ID = f"{socket.gethostname()}_{os.getpid()}_{int(time.time())}"
 log.info(f"🆔 Instance: {INSTANCE_ID}")
+
+# ═══════════════════════════════════════════════════════════
+#  📂 VOLUME DIRECTORIES (Railway persistent storage)
+# ═══════════════════════════════════════════════════════════
+VOLUME_DIR = Path(os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "data"))
+VOLUME_DIR.mkdir(parents=True, exist_ok=True)
+
+DOWNLOAD_DIR = VOLUME_DIR / "downloads";      DOWNLOAD_DIR.mkdir(exist_ok=True)
+THUMB_DIR    = VOLUME_DIR / "thumbs";         THUMB_DIR.mkdir(exist_ok=True)
+GITHUB_DIR   = VOLUME_DIR / "github_downloads"; GITHUB_DIR.mkdir(exist_ok=True)
+COOKIES_FILE = VOLUME_DIR / "cookies.txt"
+HISTORY_FILE = VOLUME_DIR / "downloaded_history.txt"
+TOKEN_FILE   = VOLUME_DIR / "github_token.txt"
+
+log.info(f"📂 Volume: {VOLUME_DIR.absolute()}")
 
 # ═══════════════════════════════════════════════════════════
 #  🛡️ DUPLICATE UPDATE BLOCKER
@@ -109,11 +129,14 @@ except Exception as e:
     log.error(f"❌ MongoDB fail: {e}")
 
 # ═══════════════════════════════════════════════════════════
-#  🔧 LOCAL BOT API SERVER
+#  🔧 LOCAL BOT API SERVER (Optional — 4GB mode)
 # ═══════════════════════════════════════════════════════════
-LOCAL_API_PORT = 8081
-LOCAL_API_DIR  = "/tmp/tg-bot-api"
+LOCAL_API_PORT = int(os.environ.get("LOCAL_API_PORT", "8081"))
+LOCAL_API_DIR  = os.environ.get("LOCAL_API_DIR", "/tmp/tg-bot-api")
 os.makedirs(LOCAL_API_DIR, exist_ok=True)
+
+# Railway internal URL support
+LOCAL_API_URL = os.environ.get("LOCAL_API_URL", "").rstrip("/")
 
 
 def find_local_api_binary():
@@ -156,6 +179,20 @@ def auto_logout_public_api():
 
 
 def start_local_api_server():
+    # If external local API URL provided (Railway separate service)
+    if LOCAL_API_URL:
+        log.info(f"🌐 Using external Local API: {LOCAL_API_URL}")
+        try:
+            r = requests.get(f"{LOCAL_API_URL}/bot{BOT_TOKEN}/getMe",
+                             timeout=10)
+            if r.status_code == 200 and r.json().get("ok"):
+                log.info("✅ External Local API ready — 4GB mode ON")
+                return True
+            log.warning(f"⚠️ External API check failed: {r.status_code}")
+        except Exception as e:
+            log.warning(f"⚠️ External API unreachable: {e}")
+        return False
+
     log.info("🚀 Local Bot API Server check...")
     binary_path = find_local_api_binary()
     if not binary_path:
@@ -186,26 +223,27 @@ def start_local_api_server():
     return False
 
 
-LOCAL_API_OK   = start_local_api_server()
-USE_LOCAL_API  = LOCAL_API_OK
-LOCAL_API_BASE = (f"http://localhost:{LOCAL_API_PORT}/bot"
-                  if LOCAL_API_OK else "https://api.telegram.org/bot")
-LOCAL_FILE_BASE = (f"http://localhost:{LOCAL_API_PORT}/file/bot"
-                   if LOCAL_API_OK else "https://api.telegram.org/file/bot")
-MAX_UPLOAD_MB  = 4000 if LOCAL_API_OK else 50
+LOCAL_API_OK = start_local_api_server()
+USE_LOCAL_API = LOCAL_API_OK
 
-DOWNLOAD_DIR = Path("downloads"); DOWNLOAD_DIR.mkdir(exist_ok=True)
-THUMB_DIR    = Path("thumbs");    THUMB_DIR.mkdir(exist_ok=True)
-COOKIES_FILE = Path("cookies.txt")
-GITHUB_DIR   = Path("github_downloads"); GITHUB_DIR.mkdir(exist_ok=True)
-HISTORY_FILE = Path("downloaded_history.txt")
-TOKEN_FILE   = Path("github_token.txt")
+if LOCAL_API_OK:
+    if LOCAL_API_URL:
+        LOCAL_API_BASE  = f"{LOCAL_API_URL}/bot"
+        LOCAL_FILE_BASE = f"{LOCAL_API_URL}/file/bot"
+    else:
+        LOCAL_API_BASE  = f"http://localhost:{LOCAL_API_PORT}/bot"
+        LOCAL_FILE_BASE = f"http://localhost:{LOCAL_API_PORT}/file/bot"
+    MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "2000"))
+else:
+    LOCAL_API_BASE  = "https://api.telegram.org/bot"
+    LOCAL_FILE_BASE = "https://api.telegram.org/file/bot"
+    MAX_UPLOAD_MB   = 50
 
 # ─── WAITING STATES ───
 WAITING_TXT            = {}
 WAITING_CAPTION        = {}
 WAITING_GITHUB         = {}
-WAITING_GITHUB_PROFILE = {}   # user clicked "Download Profile"
+WAITING_GITHUB_PROFILE = {}
 WAITING_GITHUB_SEARCH  = {}
 WAITING_GITHUB_USER    = {}
 WAITING_GITHUB_FILE    = {}
@@ -468,7 +506,6 @@ def get_zip_size_mb(zip_path: Path) -> float:
 #  📢 FORWARD TO CHANNEL
 # ═══════════════════════════════════════════════════════════
 async def forward_to_channel(ctx, source_chat_id, message_id):
-    """Forward a user's file message to channel. Returns t.me link or None."""
     if not CHANNEL_ID:
         return None
     try:
@@ -481,7 +518,6 @@ async def forward_to_channel(ctx, source_chat_id, message_id):
         return channel_link(fwd.message_id)
     except Exception as e:
         log.warning(f"⚠️ Forward to channel fail: {e}")
-        # Fallback: send plain link notice to channel
         try:
             await ctx.bot.send_message(
                 CHANNEL_ID,
@@ -494,7 +530,6 @@ async def forward_to_channel(ctx, source_chat_id, message_id):
 
 
 async def send_channel_notice(ctx, text):
-    """Send a plain text notice to channel."""
     if not CHANNEL_ID:
         return
     try:
@@ -682,7 +717,6 @@ async def github_download_batch(update, ctx, username, repos, indexes):
                     disable_web_page_preview=True)
             except Exception:
                 pass
-            # Notify channel with direct link
             await send_channel_notice(
                 ctx,
                 f"📁 *Repo:* `{repo_name}`\n"
@@ -712,7 +746,6 @@ async def github_download_batch(update, ctx, username, repos, indexes):
             send_ok += 1
             save_to_history(repo_name)
 
-            # Forward to channel
             if sent_msg:
                 ch_link = await forward_to_channel(ctx, chat_id,
                                                    sent_msg.message_id)
@@ -2076,7 +2109,6 @@ async def menu_callback(update, ctx):
     uid = q.from_user.id
     data = q.data
 
-    # ─── Main menu navigation ───
     if data == "menu:main":
         await q.edit_message_text(
             "🏠 *Main Menu*\n\nKya karna hai? Neeche button choose karo 👇",
@@ -2166,7 +2198,8 @@ async def menu_callback(update, ctx):
             f"🎫 Access: {access}\n"
             f"🔧 Mode: {mode}\n"
             f"📦 Max Upload: {MAX_UPLOAD_MB} MB\n"
-            f"🗄 DB: {db} | 🍪 Cookies: {ck}",
+            f"🗄 DB: {db} | 🍪 Cookies: {ck}\n"
+            f"📢 Channel: {'✅' if CHANNEL_ID else '❌'}",
             parse_mode="Markdown",
             reply_markup=back_kb())
         return
@@ -2198,7 +2231,6 @@ async def menu_callback(update, ctx):
                                       reply_markup=back_kb())
         return
 
-    # ─── GitHub menu ───
     if data == "gh:profile":
         WAITING_GITHUB_PROFILE[uid] = True
         await q.edit_message_text(
@@ -2247,12 +2279,15 @@ async def menu_callback(update, ctx):
 
     if data == "gh:history":
         if not is_owner(uid):
-            await q.edit_message_text("🚫 Sirf owner.", reply_markup=back_kb("menu:github", "🔙 GitHub Menu"))
+            await q.edit_message_text("🚫 Sirf owner.",
+                                      reply_markup=back_kb("menu:github",
+                                                           "🔙 GitHub Menu"))
             return
         hist = load_history()
         if not hist:
             await q.edit_message_text("📭 History empty.",
-                                      reply_markup=back_kb("menu:github", "🔙 GitHub Menu"))
+                                      reply_markup=back_kb("menu:github",
+                                                           "🔙 GitHub Menu"))
             return
         lines = [f"📜 *GitHub History* ({len(hist)} items)\n"]
         for i, name in enumerate(sorted(hist)[:50], 1):
@@ -2266,7 +2301,6 @@ async def menu_callback(update, ctx):
                                                        "🔙 GitHub Menu"))
         return
 
-    # ─── Cookies menu ───
     if data == "ck:status":
         if not is_owner(uid):
             await q.edit_message_text("🚫 Sirf owner.",
@@ -2316,7 +2350,6 @@ async def menu_callback(update, ctx):
             reply_markup=back_kb("menu:cookies"))
         return
 
-    # ─── Premium menu ───
     if data == "pm:add":
         if not is_owner(uid):
             await q.edit_message_text("🚫 Sirf owner.",
@@ -2502,7 +2535,6 @@ async def handle_text(update, ctx):
     text = (update.message.text or "").strip()
     if not text or text.startswith("/"): return
 
-    # ─── Caption template ───
     if WAITING_CAPTION.get(uid):
         WAITING_CAPTION.pop(uid, None)
         if len(text) > 900:
@@ -2513,13 +2545,11 @@ async def handle_text(update, ctx):
                                         reply_markup=caption_keyboard(uid))
         return
 
-    # ─── GitHub range input ───
     if WAITING_GITHUB.get(uid):
         handled = await github_process_range(update, ctx, uid, text)
         if handled:
             return
 
-    # ─── GitHub: profile URL input (from button) ───
     if WAITING_GITHUB_PROFILE.get(uid):
         WAITING_GITHUB_PROFILE.pop(uid, None)
         url = text if text.startswith("http") else f"https://github.com/{text}"
@@ -2531,36 +2561,30 @@ async def handle_text(update, ctx):
                 "❌ Valid GitHub username/profile nahi mila.")
             return
 
-    # ─── GitHub: search repos ───
     if WAITING_GITHUB_SEARCH.get(uid):
         WAITING_GITHUB_SEARCH.pop(uid, None)
-        # Reuse cmd by faking ctx.args
         ctx.args = text.split()
         await github_search_cmd(update, ctx)
         return
 
-    # ─── GitHub: user info ───
     if WAITING_GITHUB_USER.get(uid):
         WAITING_GITHUB_USER.pop(uid, None)
         ctx.args = [text.split()[0]]
         await github_user_cmd(update, ctx)
         return
 
-    # ─── GitHub: file search ───
     if WAITING_GITHUB_FILE.get(uid):
         WAITING_GITHUB_FILE.pop(uid, None)
         ctx.args = text.split()
         await github_file_cmd(update, ctx)
         return
 
-    # ─── GitHub: code search ───
     if WAITING_GITHUB_CODE.get(uid):
         WAITING_GITHUB_CODE.pop(uid, None)
         ctx.args = text.split()
         await github_code_cmd(update, ctx)
         return
 
-    # ─── Premium add ───
     if WAITING_PREMIUM_ADD.get(uid):
         WAITING_PREMIUM_ADD.pop(uid, None)
         parts = text.split()
@@ -2587,7 +2611,6 @@ async def handle_text(update, ctx):
         except: pass
         return
 
-    # ─── Premium remove ───
     if WAITING_PREMIUM_REMOVE.get(uid):
         WAITING_PREMIUM_REMOVE.pop(uid, None)
         try:
@@ -2595,16 +2618,17 @@ async def handle_text(update, ctx):
         except Exception:
             await update.message.reply_text("❌ user_id number."); return
         if remove_premium(target):
-            await update.message.reply_text(f"✅ `{target}` removed.",
-                                            parse_mode="Markdown",
-                                            reply_markup=back_kb("menu:premium", "🔙 Premium Menu"))
+            await update.message.reply_text(
+                f"✅ `{target}` removed.",
+                parse_mode="Markdown",
+                reply_markup=back_kb("menu:premium", "🔙 Premium Menu"))
         else:
-            await update.message.reply_text(f"ℹ️ `{target}` nahi tha.",
-                                            parse_mode="Markdown",
-                                            reply_markup=back_kb("menu:premium", "🔙 Premium Menu"))
+            await update.message.reply_text(
+                f"ℹ️ `{target}` nahi tha.",
+                parse_mode="Markdown",
+                reply_markup=back_kb("menu:premium", "🔙 Premium Menu"))
         return
 
-    # ─── URL upload (from button) ───
     if WAITING_URL.get(uid):
         WAITING_URL.pop(uid, None)
         if not URL_RE.search(text):
@@ -2618,12 +2642,10 @@ async def handle_text(update, ctx):
         await start_batch(update, ctx, items, batch_label="Direct URL")
         return
 
-    # ─── GitHub profile URL auto-detect ───
     if is_github_profile_url(text):
         await github_show_repos(update, ctx, text)
         return
 
-    # ─── Regular URL(s) ───
     if not URL_RE.search(text):
         await update.message.reply_text(
             "❓ URL bhejo ya /help dekho.",
@@ -2722,7 +2744,6 @@ def build_application():
     app.add_handler(CommandHandler("delcookies", delcookies_cmd))
 
     # ── Callbacks ──
-    # Menu navigation (must come before generic patterns)
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^menu:"))
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^gh:"))
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^ck:"))
@@ -2755,7 +2776,7 @@ def run_bot():
                 f"🤖 Bot starting... Mode: {'4GB' if USE_LOCAL_API else '50MB'} | "
                 f"MongoDB: {'✅' if MONGO_OK else '❌'} | "
                 f"Cookies: {'✅' if COOKIES_FILE.exists() else '❌'} | "
-                f"Channel: {CHANNEL_ID}"
+                f"Channel: {CHANNEL_ID} | Volume: {VOLUME_DIR}"
             )
 
             app.run_polling(
