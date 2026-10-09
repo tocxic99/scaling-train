@@ -4,8 +4,8 @@
 import os
 
 DEFAULT_BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-DEFAULT_API_ID    = os.environ.get("API_ID", "20346550")
-DEFAULT_API_HASH  = os.environ.get("API_HASH", "bc79c3bea7a626887bdc0871eecf0327")
+DEFAULT_API_ID    = os.environ.get("API_ID", "")
+DEFAULT_API_HASH  = os.environ.get("API_HASH", "")
 OWNER_ID          = int(os.environ.get("OWNER_ID", ""))
 
 MONGO_URI = os.environ.get(
@@ -18,7 +18,7 @@ DEFAULT_FALLBACK_USERID = os.environ.get("FALLBACK_USERID", "464995")
 DEFAULT_AKAMAI_HOST     = os.environ.get("AKAMAI_HOST", "armathsapi.akamai.net.in")
 DEFAULT_GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
 DEFAULT_CHANNEL_ID      = int(os.environ.get("CHANNEL_ID", "-1004350191024")) or None
-DEFAULT_MAX_UPLOAD_MB   = int(os.environ.get("MAX_UPLOAD_MB", "50"))
+DEFAULT_MAX_UPLOAD_MB   = int(os.environ.get("MAX_UPLOAD_MB", ""))
 
 USE_PROXY = False
 PROXIES = {
