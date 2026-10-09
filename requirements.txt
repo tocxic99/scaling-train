@@ -1,0 +1,5 @@
+python-telegram-bot==21.6
+requests==2.32.3
+yt-dlp[default]==2025.11.12
+PyJWT==2.10.1
+pymongo[srv]==4.9.2
