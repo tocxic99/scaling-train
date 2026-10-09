@@ -6,7 +6,7 @@ import os
 DEFAULT_BOT_TOKEN = os.environ.get("BOT_TOKEN", "8826538267:AAGgyE3EX_pOxrxTzg7fka3fp4DGo1PU5mY")
 DEFAULT_API_ID    = os.environ.get("API_ID", "20346550")
 DEFAULT_API_HASH  = os.environ.get("API_HASH", "bc79c3bea7a626887bdc0871eecf0327")
-OWNER_ID          = int(os.environ.get("OWNER_ID", "8617986101"))
+OWNER_ID          = int(os.environ.get("OWNER_ID", ""))
 
 MONGO_URI = os.environ.get(
     "MONGO_URI",
